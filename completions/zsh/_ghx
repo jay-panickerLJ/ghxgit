@@ -1,45 +1,40 @@
 #compdef ghx
 
-# ZSH completion for ghx (ghxgit)
+# ZSH completion for ghx (ghxgit CLI)
 
-_ghx() {
+_ghx_complete() {
     local -a commands
-    local -a options
-    local -a search_types
+    local -a git_commands
     
     commands=(
         'jump:Search and jump to a PR, issue, branch, or commit'
+        'branch:Manage git branches'
+        'push:Push commits with smart options'
+        'pull:Pull changes from remote'
+        'sync:Fetch and pull all changes'
+        'status:Show git status'
+        'log:Show recent commits'
     )
     
-    options=(
-        '--open[Open the match in your browser]'
-        '--checkout[Checkout the matched PR/branch locally]'
-        '--type[Limit search to a specific type]:type:(pr issue branch commit)'
-        '--verbose[Show debug output]'
-        '-v[Show debug output]'
-        '--help[Show help message]'
-        '--version[Show version]'
-    )
-    
-    search_types=(
-        'pr:Pull request'
-        'issue:Issue'
-        'branch:Branch'
-        'commit:Commit'
+    git_commands=(
+        'list:List all branches'
+        'current:Show current branch'
+        'switch:Switch to a branch'
+        'delete:Delete a branch'
+        'create:Create a new branch'
     )
     
     local context state line
-    
     _arguments -C \
         '1: :->command' \
         '*:: :->args'
     
     case $state in
         command)
-            _describe "command" commands
+            _describe "ghx command" commands
             ;;
         args)
-            case $line[1] in
+            case ${line[1]} in
                 jump)
                     _arguments \
                         '--open[Open in browser]' \
@@ -47,6 +42,31 @@ _ghx() {
                         '--type[Search type]:type:(pr issue branch commit)' \
                         '--verbose[Debug output]' \
                         '-v[Debug output]' \
+                        '--help[Show help]'
+                    ;;
+                branch)
+                    _arguments -C \
+                        '1: :->subcommand'
+                    
+                    case $state in
+                        subcommand)
+                            _describe "branch subcommand" git_commands
+                            ;;
+                    esac
+                    ;;
+                push)
+                    _arguments \
+                        '--force[Force push (dangerous!)]' \
+                        '--force-with-lease[Safe force push]' \
+                        '-u[Set upstream]' \
+                        '--no-verify[Skip pre-push hooks]'
+                    ;;
+                pull)
+                    _arguments \
+                        '--rebase[Pull with rebase]'
+                    ;;
+                status|log|sync)
+                    _arguments \
                         '--help[Show help]'
                     ;;
                 *)
@@ -59,4 +79,4 @@ _ghx() {
     esac
 }
 
-_ghx
+_ghx_complete

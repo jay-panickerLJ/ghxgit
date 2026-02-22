@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ghxgit - Search and jump to GitHub PRs, issues, branches, commits
-# Usage: ghx jump <query> [OPTIONS]
-#   --open         Open the match in browser
-#   --checkout     Checkout the PR branch locally
-#   --type <type>  Limit search to specific type: pr, issue, branch, commit
-#   --help         Show this help message
-#   -v, --verbose  Verbose output
+# ghxgit - GitHub eXperience CLI
+# Search and jump to GitHub PRs, issues, branches, commits
+# Manage Git workflow with enhanced branch and push helpers
+# 
+# Usage: ghx <command> [options]
 
-VERSION="0.1.0"
+VERSION="0.2.0"
 VERBOSE=${VERBOSE:-0}
 
 log_verbose() {
@@ -31,29 +29,70 @@ show_help() {
 ghx - GitHub Experience CLI Tool
 
 USAGE
-    ghx jump <query> [OPTIONS]
+    ghx <command> [options]
     ghx --help
     ghx --version
 
 COMMANDS
-    jump <query>    Search and jump to a PR, issue, branch, or commit
+    jump <query>        Search and jump to a PR, issue, branch, or commit
+    branch              Show current branch
+    branch list         List all branches in the repository
+    branch switch <name> Switch to a branch (with fuzzy search)
+    branch delete <name> Delete a local branch (with confirmation)
+    branch create <name> Create a new branch
+    push                Smart git push with options
+    status              Show git status
+    log                 Show recent commits
+    pull                Pull latest changes with rebase option
+    sync                Fetch and pull latest changes
 
-OPTIONS
-    --open          Open the best match in your browser
-    --checkout      Checkout the matched PR/branch locally
-    --type <type>   Limit search to a specific type:
-                    - pr, issue, branch, commit
-    --verbose (-v)  Show debug output
-    --help          Show this help message
-    --version       Show version
+GLOBAL OPTIONS
+    --verbose (-v)      Show debug output
+    --help              Show this help message
+    --version           Show version
 
 EXAMPLES
+    # Jump to PR/issue/branch/commit
     ghx jump OPS-123
     ghx jump "increase timeout" --open
     ghx jump OPS-123 --checkout
-    ghx jump OPS-123 --type pr
 
-SEARCH ORDER (DEFAULT)
+    # Branch management
+    ghx branch list
+    ghx branch switch main
+    ghx branch create feature/new-feature
+    ghx branch delete old-feature
+
+    # Git workflow
+    ghx push
+    ghx push -u origin
+    ghx push --force-with-lease
+    ghx status
+    ghx log
+    ghx pull
+    ghx pull --rebase
+    ghx sync
+
+JUMP OPTIONS (for 'ghx jump')
+    --open              Open the best match in your browser
+    --checkout          Checkout the matched PR/branch locally
+    --type <type>       Limit search to: pr, issue, branch, commit
+    --verbose (-v)      Show debug output
+
+PUSH OPTIONS (for 'ghx push')
+    --force             Force push (not recommended)
+    --force-with-lease  Force push safely
+    -u                  Set upstream
+    --no-verify         Skip pre-push hooks
+    <branch>            Specify branch (default: current)
+
+BRANCH SEARCH
+    When using 'ghx branch switch', you can:
+    - Type a partial branch name for fuzzy matching
+    - Press ENTER to select the highlighted branch
+    - Type more to filter results
+
+SEARCH ORDER (for 'ghx jump')
     1. Pull Requests in current repo
     2. Issues in current repo
     3. Branches in current repo
@@ -289,6 +328,347 @@ checkout_branch() {
     git checkout "$branch" || git fetch origin "$branch:$branch" && git checkout "$branch"
 }
 
+# LIST BRANCHES - Show all branches in the repo
+list_branches() {
+    log_verbose "Listing branches"
+    
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        log_error "Not a git repository"
+        return 1
+    fi
+    
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD)
+    
+    echo "Local branches:"
+    echo "==============="
+    git branch --list --format='%(if)%(HEAD)%(then)* %(else)  %(end)%(refname:short) %(if)%(objectname:short)%(then)(%(objectname:short))%(end)' | \
+        awk -v current="$current_branch" '{
+            if($0 ~ /^\*/) {
+                printf "\033[32m%s\033[0m\n", $0  # Green for current
+            } else {
+                print $0
+            }
+        }'
+    
+    echo ""
+    echo "Remote branches:"
+    echo "================"
+    git branch -r --list | grep -v HEAD | head -10 || echo "(none)"
+}
+
+# GET CURRENT BRANCH
+get_current_branch() {
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        return 1
+    fi
+    git rev-parse --abbrev-ref HEAD
+}
+
+# SWITCH BRANCH - Switch to branch with fuzzy search
+switch_branch() {
+    local search_term="${1:-}"
+    
+    log_verbose "Switching branches"
+    
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        log_error "Not a git repository"
+        return 1
+    fi
+    
+    # If no search term, list branches for user to choose
+    if [[ -z "$search_term" ]]; then
+        echo "Fetching branches..."
+        git fetch --all --prune >/dev/null 2>&1 || true
+        
+        local branches
+        branches=$(git branch -a --format='%(refname:short)' | grep -v HEAD | sort -u)
+        
+        if [[ -z "$branches" ]]; then
+            log_error "No branches found"
+            return 1
+        fi
+        
+        # Try to use fzf if available, otherwise use grep
+        local selected
+        if command -v fzf &>/dev/null; then
+            selected=$(echo "$branches" | fzf --preview 'git log -1 --date=short --format="Branch: %h %s (%cd)" {}')
+        else
+            echo "Available branches:"
+            echo "$branches" | nl
+            read -p "Select branch number: " -r selection
+            selected=$(echo "$branches" | sed -n "${selection}p")
+        fi
+        
+        if [[ -z "$selected" ]]; then
+            log_error "No branch selected"
+            return 1
+        fi
+        
+        search_term="$selected"
+    fi
+    
+    # Try exact match first
+    if git branch -a | grep -q "^  $search_term$" || git branch -a | grep -q "^\* $search_term$"; then
+        log_verbose "Switching to $search_term"
+        git checkout "$search_term"
+        return $?
+    fi
+    
+    # Try matching in local branches
+    local matching
+    matching=$(git branch --list "*$search_term*" | sed 's/^[* ] //')
+    
+    if [[ -z "$matching" ]]; then
+        # Try matching in remote branches
+        matching=$(git branch -r --list "*$search_term*" | sed 's|origin/||' | sed 's/^ *//')
+    fi
+    
+    if [[ -z "$matching" ]]; then
+        log_error "No branches found matching: $search_term"
+        echo "Did you mean:"
+        git branch -a | head -5
+        return 1
+    fi
+    
+    # If multiple matches, show them
+    local match_count
+    match_count=$(echo "$matching" | wc -l)
+    
+    if [[ $match_count -gt 1 ]]; then
+        echo "Multiple matches found:"
+        echo "$matching" | nl
+        
+        if command -v fzf &>/dev/null; then
+            local selected
+            selected=$(echo "$matching" | fzf)
+            matching="$selected"
+        else
+            read -p "Select branch number: " -r selection
+            matching=$(echo "$matching" | sed -n "${selection}p")
+        fi
+    fi
+    
+    # Remove remote prefix if present
+    matching=$(echo "$matching" | sed 's|origin/||')
+    
+    log_verbose "Checking out: $matching"
+    git checkout "$matching"
+}
+
+# DELETE BRANCH
+delete_branch() {
+    local branch="$1"
+    
+    if [[ -z "$branch" ]]; then
+        log_error "Branch name required"
+        return 1
+    fi
+    
+    local current_branch
+    current_branch=$(get_current_branch)
+    
+    if [[ "$current_branch" == "$branch" ]]; then
+        log_error "Cannot delete the currently checked out branch"
+        return 1
+    fi
+    
+    echo "Delete branch: $branch?"
+    read -p "Are you sure? (y/N): " -r confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "Cancelled"
+        return 0
+    fi
+    
+    if git branch -D "$branch"; then
+        echo "✓ Deleted branch: $branch"
+    else
+        log_error "Failed to delete branch: $branch"
+        return 1
+    fi
+}
+
+# CREATE BRANCH
+create_branch() {
+    local branch="$1"
+    local source="${2:-main}"
+    
+    if [[ -z "$branch" ]]; then
+        log_error "Branch name required"
+        return 1
+    fi
+    
+    log_verbose "Creating branch: $branch from $source"
+    
+    if git rev-parse --verify "$source" >/dev/null 2>&1; then
+        git checkout "$source"
+        git pull origin "$source" 2>/dev/null || true
+        git checkout -b "$branch"
+        echo "✓ Created and switched to branch: $branch"
+    else
+        log_error "Source branch not found: $source"
+        return 1
+    fi
+}
+
+# GIT PUSH - Smart push helper
+git_push() {
+    local force_lease=0
+    local force=0
+    local set_upstream=0
+    local no_verify=0
+    local branch=""
+    local push_args=()
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force-with-lease)
+                force_lease=1
+                shift
+                ;;
+            --force)
+                force=1
+                shift
+                ;;
+            -u|--set-upstream)
+                set_upstream=1
+                shift
+                ;;
+            --no-verify)
+                no_verify=1
+                shift
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                return 1
+                ;;
+            *)
+                branch="$1"
+                shift
+                ;;
+        esac
+    done
+    
+    # Validate branch
+    if [[ -z "$branch" ]]; then
+        branch=$(get_current_branch)
+        log_verbose "Using current branch: $branch"
+    fi
+    
+    # Build push arguments
+    if [[ $force_lease -eq 1 ]]; then
+        push_args+=("--force-with-lease")
+    elif [[ $force -eq 1 ]]; then
+        echo "⚠️  WARNING: Force push is dangerous!"
+        read -p "Are you sure? (y/N): " -r confirm
+        if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+            echo "Cancelled"
+            return 0
+        fi
+        push_args+=("--force")
+    fi
+    
+    if [[ $set_upstream -eq 1 ]]; then
+        push_args+=("-u" "origin")
+    fi
+    
+    if [[ $no_verify -eq 1 ]]; then
+        push_args+=("--no-verify")
+    fi
+    
+    push_args+=("$branch")
+    
+    echo "Pushing: git push ${push_args[*]}"
+    git push "${push_args[@]}" || {
+        local exit_code=$?
+        if [[ $exit_code -eq 1 ]]; then
+            echo ""
+            echo "Push failed. Try:"
+            echo "  ghx push -u origin $branch"
+        fi
+        return $exit_code
+    }
+}
+
+# GIT PULL - Smart pull helper
+git_pull() {
+    local rebase=0
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --rebase)
+                rebase=1
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+    
+    if [[ $rebase -eq 1 ]]; then
+        echo "Pulling with rebase..."
+        git pull --rebase
+    else
+        echo "Pulling..."
+        git pull
+    fi
+}
+
+# GIT SYNC - Fetch and pull
+git_sync() {
+    echo "Fetching all remotes..."
+    git fetch --all --prune
+    
+    echo "Pulling latest changes..."
+    git pull
+}
+
+# GIT STATUS - Show status
+git_status() {
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        log_error "Not a git repository"
+        return 1
+    fi
+    
+    local branch
+    branch=$(get_current_branch)
+    
+    echo "Branch: $branch"
+    echo "Status:"
+    git status -s
+    
+    # Show commits ahead/behind
+    echo ""
+    echo "Commits:"
+    local ahead behind
+    ahead=$(git rev-list --count @{u}..)
+    behind=$(git rev-list --count ..@{u})
+    
+    if [[ "$ahead" -gt 0 ]]; then
+        echo "  📤 $ahead commit(s) ahead of origin"
+    fi
+    if [[ "$behind" -gt 0 ]]; then
+        echo "  📥 $behind commit(s) behind origin"
+    fi
+    if [[ "$ahead" -eq 0 && "$behind" -eq 0 ]]; then
+        echo "  ✓ In sync with origin"
+    fi
+}
+
+# GIT LOG - Show recent commits
+git_log() {
+    local limit="${1:-10}"
+    
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        log_error "Not a git repository"
+        return 1
+    fi
+    
+    echo "Recent commits:"
+    git log --oneline -n "$limit"
+}
+
 # Check dependencies
 check_dependencies() {
     local missing=()
@@ -310,33 +690,76 @@ check_dependencies() {
 main() {
     local command="${1:-}"
     
+    # Handle global options before command
+    if [[ -z "$command" ]]; then
+        show_help
+        exit 0
+    fi
+    
     case "$command" in
         --help|-h)
             show_help
             exit 0
             ;;
-        --version|-v)
+        --version)
             show_version
             exit 0
             ;;
         jump)
             shift
+            cmd_jump "$@"
+            exit $?
             ;;
-        "")
+        branch)
+            shift
+            cmd_branch "$@"
+            exit $?
+            ;;
+        push)
+            shift
+            check_dependencies || exit 1
+            git_push "$@"
+            exit $?
+            ;;
+        pull)
+            shift
+            check_dependencies || exit 1
+            git_pull "$@"
+            exit $?
+            ;;
+        sync)
+            shift
+            check_dependencies || exit 1
+            git_sync
+            exit $?
+            ;;
+        status)
+            shift
+            check_dependencies || exit 1
+            git_status
+            exit $?
+            ;;
+        log)
+            shift
+            check_dependencies || exit 1
+            git_log "$@"
+            exit $?
+            ;;
+        *)
+            log_error "Unknown command: $command"
             show_help
             exit 1
             ;;
-        *)
-            # Assume first arg is the command if it looks like a query
-            ;;
     esac
-    
+}
+
+# JUMP command handler
+cmd_jump() {
     # Parse arguments
     local query=""
     local open_browser=0
     local do_checkout=0
     local search_type=""
-    local verbose=0
     
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -353,21 +776,40 @@ main() {
                 shift 2
                 ;;
             -v|--verbose)
-                verbose=1
                 VERBOSE=1
                 shift
                 ;;
             --help|-h)
-                show_help
-                exit 0
-                ;;
-            --version)
-                show_version
+                cat <<EOF
+ghx jump - Search and jump to PRs, issues, branches, commits
+
+USAGE
+    ghx jump <query> [OPTIONS]
+
+OPTIONS
+    --open              Open the match in your browser
+    --checkout          Checkout the matched PR/branch locally
+    --type <type>       Limit search to type: pr, issue, branch, commit
+    --verbose (-v)      Show debug output
+    --help              Show help
+
+EXAMPLES
+    ghx jump OPS-123
+    ghx jump "increase timeout" --open
+    ghx jump OPS-123 --checkout
+    ghx jump OPS-123 --type pr
+
+SEARCH ORDER
+    1. Pull Requests
+    2. Issues
+    3. Branches
+    4. Commits
+
+EOF
                 exit 0
                 ;;
             -*)
                 log_error "Unknown option: $1"
-                show_help
                 exit 1
                 ;;
             *)
@@ -384,7 +826,6 @@ main() {
     
     if [[ -z "$query" ]]; then
         log_error "Query is required"
-        show_help
         exit 1
     fi
     
@@ -401,8 +842,7 @@ main() {
     log_verbose "Using repository: $repo"
     
     # Search
-    local result
-    local found_type
+    local result found_type
     if ! read -r result found_type < <(search_all "$repo" "$query" "$search_type"); then
         exit 1
     fi
@@ -423,6 +863,71 @@ main() {
         checkout_branch "$branch_name" "$found_type" || exit 1
         log_info "Successfully checked out: $branch_name"
     fi
+}
+
+# BRANCH command handler
+cmd_branch() {
+    local subcommand="${1:-}"
+    
+    check_dependencies || exit 1
+    
+    case "$subcommand" in
+        list)
+            list_branches
+            ;;
+        current)
+            get_current_branch
+            ;;
+        switch)
+            shift
+            switch_branch "$@"
+            ;;
+        delete)
+            shift
+            delete_branch "$@"
+            ;;
+        create)
+            shift
+            create_branch "$@"
+            ;;
+        "")
+            # No subcommand - show current branch
+            local current
+            if current=$(get_current_branch); then
+                echo "Current branch: $current"
+            fi
+            ;;
+        --help|-h)
+            cat <<EOF
+ghx branch - Manage git branches
+
+USAGE
+    ghx branch                  Show current branch
+    ghx branch list             List all branches
+    ghx branch current          Show current branch name
+    ghx branch switch <name>    Switch to a branch
+    ghx branch delete <name>    Delete a branch
+    ghx branch create <name>    Create a new branch
+
+EXAMPLES
+    ghx branch list
+    ghx branch switch main
+    ghx branch switch feature/
+    ghx branch create feature/new-feature
+    ghx branch delete old-feature
+
+NOTES
+    - 'switch' supports fuzzy matching for branch names
+    - 'switch' will use fzf if available for interactive selection
+    - 'delete' requires confirmation
+
+EOF
+            ;;
+        *)
+            log_error "Unknown branch subcommand: $subcommand"
+            exit 1
+            ;;
+    esac
 }
 
 # Run main function

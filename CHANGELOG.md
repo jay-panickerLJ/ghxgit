@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-02-22
+
+### Added
+- **Branch Management Commands**:
+  - `ghx branch list` - List all local and remote branches with color highlighting
+  - `ghx branch current` - Show current branch name
+  - `ghx branch switch <name>` - Switch to branch with fuzzy search support
+  - `ghx branch delete <name>` - Delete local branch with confirmation
+  - `ghx branch create <name>` - Create new branch from main
+  
+- **Git Workflow Commands**:
+  - `ghx push` - Smart push with safe options (--force-with-lease, -u, etc.)
+  - `ghx pull` - Pull with optional rebase
+  - `ghx sync` - Fetch all remotes and pull in one command
+  - `ghx status` - Show status with ahead/behind commit counts
+  - `ghx log` - Show recent commits (customizable limit)
+
+- **Enhanced Features**:
+  - fzf integration for interactive branch selection
+  - Fuzzy branch name matching for quick switching
+  - Smart force push with confirmation prompts
+  - Color-coded branch output
+  - Detailed git status with remote tracking info
+  - Safe branch deletion with confirmation
+
+- **Improved Documentation**:
+  - Extended README with git workflow examples
+  - New command reference section
+  - Workflow scenario documentation
+
 ## [0.1.0] - 2026-02-22
 
 ### Added
@@ -30,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Planned Features
 
-### [0.2.0] - Planned
+### [0.3.0] - Future
 - [ ] Bash shell completion
 - [ ] Fish shell completion
 - [ ] Configuration file support (~/.ghxgitrc)
@@ -38,13 +68,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [ ] Support for GitHub Enterprise
 - [ ] Multi-repository search
 - [ ] Custom search order configuration
-- [ ] Integration with fzf for interactive search
-- [ ] GitHub Actions integration
+- [ ] Create PR from current branch
+- [ ] Create issue from template
 
-### [0.3.0] - Planned
-- [ ] Graphql query support for advanced searches
-- [ ] Create PR/issue from command line
-- [ ] Add reviewers/assignees to PRs
-- [ ] Comment on PRs from CLI
-- [ ] Merge/close PRs from CLI
-- [ ] Bulk operations on multiple results
+### [0.4.0] - Future
+- [ ] Interactive rebase assistant
+- [ ] Commit message generator with AI
+- [ ] Automated changelog generation
+- [ ] GitHub Actions integration
+- [ ] PR review automation
+- [ ] Release notes generator

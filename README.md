@@ -1,6 +1,6 @@
 # ghxgit - GitHub eXperience CLI
 
-A powerful command-line tool for searching and jumping to GitHub PRs, issues, branches, and commits directly from your terminal.
+A powerful command-line tool for searching and jumping to GitHub PRs, issues, branches, and commits directly from your terminal. Plus integrated git workflow helpers for branches, pushing, and pulling.
 
 ## Features
 
@@ -8,8 +8,13 @@ A powerful command-line tool for searching and jumping to GitHub PRs, issues, br
 - 🌐 **Browser Integration** - Open results directly in your browser with `--open`
 - 🚀 **Quick Checkout** - Check out PR branches locally with `--checkout`
 - 🎯 **Type Filtering** - Limit searches to specific types (PR, issue, branch, commit)
-- ⚡ **Fast** - Built with bash for minimal overhead
+- 🌳 **Branch Management** - List, switch, create, and delete branches easily
+- 📤 **Smart Push** - Push with intelligent options (safe force push, upstream tracking)
+- 📥 **Pull Helper** - Pull with rebase option and sync commands
+- 🔄 **Git Sync** - Fetch and pull all changes in one command
+- 💡 **Git Status** - Quick status check with ahead/behind commits
 - 📝 **ZSH Completions** - Full shell completion support
+- ⚡ **Fast** - Built with bash for minimal overhead
 
 ## Installation
 
@@ -18,6 +23,7 @@ A powerful command-line tool for searching and jumping to GitHub PRs, issues, br
 - **Git** - Obviously!
 - **gh (GitHub CLI)** - [Install guide](https://cli.github.com)
 - **jq** - JSON processor
+- **fzf** (optional) - [Install guide](https://github.com/junegunn/fzf) - For interactive branch selection
 
 ### Install on Linux/macOS
 
@@ -101,14 +107,149 @@ ghx jump OPS-123 --type pr --open
 ghx jump "develop" --type branch --checkout
 ```
 
-## Search Order (Default)
+## Git Workflow Commands
 
-When no `--type` is specified, ghxgit searches in this order and returns the first match:
+ghxgit includes powerful git workflow commands to complement your GitHub operations.
 
-1. **Pull Requests** - by PR number or in title/body
-2. **Issues** - by issue ID or in title/body
-3. **Branches** - by branch name
-4. **Commits** - by commit hash or message
+### Branch Management
+
+#### List Branches
+
+```bash
+ghx branch list
+# Shows all local and remote branches with color highlighting
+```
+
+Output:
+```
+Local branches:
+===============
+* main (abc1234)
+  develop (def5678)
+  feature/dashboard (ghi9012)
+
+Remote branches:
+================
+  origin/main
+  origin/develop
+```
+
+#### Switch Branches
+
+```bash
+# List and select interactively
+ghx branch switch
+
+# Fuzzy search for a branch
+ghx branch switch feature
+# Finds "feature/dashboard" and switches
+
+# Exact match
+ghx branch switch main
+
+# Works with fzf for interactive selection if available
+# (displays branch commit previews)
+```
+
+#### Create Branch
+
+```bash
+# Create from main
+ghx branch create feature/my-feature
+
+# Create from specific source
+ghx branch create feature/new-feature develop
+```
+
+#### Delete Branch
+
+```bash
+# Delete with confirmation
+ghx branch delete old-feature
+# Asks for confirmation before deleting
+```
+
+#### Show Current Branch
+
+```bash
+ghx branch
+# Displays current branch name
+```
+
+### Push & Pull Commands
+
+#### Smart Push
+
+```bash
+# Push current branch
+ghx push
+
+# Push specific branch
+ghx push develop
+
+# Set upstream on first push
+ghx push -u
+
+# Safe force push (recommended over --force)
+ghx push --force-with-lease
+
+# Force push (with confirmation)
+ghx push --force
+
+# Skip pre-push hooks
+ghx push --no-verify
+```
+
+#### Pull Changes
+
+```bash
+# Standard pull
+ghx pull
+
+# Pull with rebase
+ghx pull --rebase
+```
+
+#### Sync with Remote
+
+```bash
+# Fetch all remotes and pull
+ghx sync
+# Equivalent to: git fetch --all && git pull
+```
+
+### Status & History
+
+#### Quick Status
+
+```bash
+ghx status
+# Shows:
+# - Current branch
+# - Modified files
+# - Commits ahead/behind origin
+```
+
+Output:
+```
+Branch: feature/dashboard
+Status:
+ M src/dashboard.js
+ A src/components/Widget.js
+
+Commits:
+  📤 2 commit(s) ahead of origin
+```
+
+#### View Recent Commits
+
+```bash
+# Show last 10 commits
+ghx log
+
+# Show last 20 commits
+ghx log 20
+```
 
 ## Command Reference
 
@@ -119,7 +260,7 @@ USAGE
     ghx jump <query> [OPTIONS]
 
 QUERY
-    The search term (PR number, issue ID, branch name, etc.)
+    The search term (PR number, issue ID, branch name, commit hash, etc.)
 
 OPTIONS
     --open               Open the result in your default browser
@@ -127,7 +268,89 @@ OPTIONS
     --type <type>       Limit search to type: pr, issue, branch, commit
     --verbose (-v)      Show debug output
     --help              Show help message
-    --version           Show version information
+```
+
+### ghx branch
+
+```
+USAGE
+    ghx branch [SUBCOMMAND] [OPTIONS]
+
+SUBCOMMANDS
+    list                List all branches (local and remote)
+    current             Show current branch name
+    switch <name>       Switch to a branch (supports fuzzy matching)
+    delete <name>       Delete a local branch (requires confirmation)
+    create <name>       Create a new branch from main
+    
+    (no subcommand)     Show current branch
+
+OPTIONS (for switch)
+    <name>              Branch name (partial match supported)
+```
+
+### ghx push
+
+```
+USAGE
+    ghx push [BRANCH] [OPTIONS]
+
+SERVICE
+    Safely pushes code with helpful options
+
+OPTIONS
+    --force-with-lease  Force push safely (recommended)
+    --force             Force push (shows confirmation)
+    -u                  Set upstream (origin)
+    --no-verify         Skip pre-push hooks
+    
+BRANCH (optional)
+    Defaults to current branch if not specified
+```
+
+### ghx pull
+
+```
+USAGE
+    ghx pull [OPTIONS]
+
+OPTIONS
+    --rebase            Pull with rebase instead of merge
+```
+
+### ghx sync
+
+```
+USAGE
+    ghx sync
+
+FEATURES
+    - Fetches all remotes
+    - Prunes deleted branches
+    - Pulls latest changes
+    Equivalent to: git fetch --all --prune && git pull
+```
+
+### ghx status
+
+```
+USAGE
+    ghx status
+
+SHOWS
+    - Current branch
+    - Modified/staged files
+    - Commits ahead/behind origin
+```
+
+### ghx log
+
+```
+USAGE
+    ghx log [LIMIT]
+
+LIMIT (optional)
+    Number of commits to show (default: 10)
 ```
 
 ## Examples
@@ -156,32 +379,85 @@ ghx jump OPS-123 -v
 
 ### Workflow Examples
 
-#### Quick PR Checkout and Review
+#### Work on a PR
 
 ```bash
-# Find the PR and checkout in one command
+# Search and checkout PR in one command
 ghx jump OPS-123 --checkout
 
-# Your local branch is now checked out
-git log --oneline -5
-git diff main..
+# View the files changed
+ghx status
+
+# Review recent commits
+ghx log 5
+
+# Push your changes
+ghx push
 ```
 
-#### Open Multiple Results
+#### Create and manage branches
 
 ```bash
-# Find and open the PR
-ghx jump OPS-123 --open
+# Create a new feature branch
+ghx branch create feature/new-widget
 
-# Open the issue separately
-ghx jump OPS-123 --type issue --open
+# List all branches to see where you are
+ghx branch list
+
+# Make some changes...
+ghx status
+
+# Push and set upstream
+ghx push -u
+
+# When done, switch back to main
+ghx branch switch main
+
+# Delete the feature branch
+ghx branch delete feature/new-widget
 ```
 
-#### Search Across Repository
+#### Keep in sync with team
 
 ```bash
-# Fuzzy search by description
-ghx jump "authentication middleware" --type pr --open
+# See what's on the remote
+ghx sync
+
+# Check if you're behind
+ghx status
+
+# View recent changes
+ghx log
+
+# Switch to the latest develop
+ghx branch switch develop
+```
+
+#### Interactive branch switching
+
+```bash
+# List branches with commit info and select interactively
+ghx branch switch
+# (shows a fuzzy-searchable list if fzf is installed)
+```
+
+#### Quick feature review and merge workflow
+
+```bash
+# Find the PR
+ghx jump "authentication" --type pr
+
+# Jump to and checkout the branch
+ghx jump "authentication" --checkout
+
+# Test/review the code
+ghx log 5
+
+# Switch back to main
+ghx branch switch main
+
+# Merge (or let GitHub handle via PR)
+git merge feature/authentication
 ```
 
 ## Configuration

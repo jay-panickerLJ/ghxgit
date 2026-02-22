@@ -533,8 +533,8 @@ section h2 {
 }
 
 .installation-steps {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 2rem;
     margin: 3rem 0;
     max-width: 800px;
@@ -548,6 +548,8 @@ section h2 {
     border-radius: 0.75rem;
     position: relative;
     padding-left: 4rem;
+    display: block;
+    width: 100%;
 }
 
 .step-number {

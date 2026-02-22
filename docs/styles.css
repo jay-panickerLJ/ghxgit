@@ -533,8 +533,8 @@ section h2 {
 }
 
 .installation-steps {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     gap: 2rem;
     margin: 3rem 0;
     max-width: 800px;
@@ -548,8 +548,9 @@ section h2 {
     border-radius: 0.75rem;
     position: relative;
     padding-left: 4rem;
-    display: block;
-    width: 100%;
+    display: block !important;
+    width: 100% !important;
+    flex-basis: 100% !important;
 }
 
 .step-number {
@@ -867,10 +868,6 @@ section h2 {
     .cta-buttons .btn {
         width: 100%;
         max-width: 300px;
-    }
-
-    .installation-steps {
-        grid-template-columns: 1fr;
     }
 
     .terminal-demo {

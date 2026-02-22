@@ -1,0 +1,62 @@
+#compdef ghx
+
+# ZSH completion for ghx (ghxgit)
+
+_ghx() {
+    local -a commands
+    local -a options
+    local -a search_types
+    
+    commands=(
+        'jump:Search and jump to a PR, issue, branch, or commit'
+    )
+    
+    options=(
+        '--open[Open the match in your browser]'
+        '--checkout[Checkout the matched PR/branch locally]'
+        '--type[Limit search to a specific type]:type:(pr issue branch commit)'
+        '--verbose[Show debug output]'
+        '-v[Show debug output]'
+        '--help[Show help message]'
+        '--version[Show version]'
+    )
+    
+    search_types=(
+        'pr:Pull request'
+        'issue:Issue'
+        'branch:Branch'
+        'commit:Commit'
+    )
+    
+    local context state line
+    
+    _arguments -C \
+        '1: :->command' \
+        '*:: :->args'
+    
+    case $state in
+        command)
+            _describe "command" commands
+            ;;
+        args)
+            case $line[1] in
+                jump)
+                    _arguments \
+                        '--open[Open in browser]' \
+                        '--checkout[Checkout branch]' \
+                        '--type[Search type]:type:(pr issue branch commit)' \
+                        '--verbose[Debug output]' \
+                        '-v[Debug output]' \
+                        '--help[Show help]'
+                    ;;
+                *)
+                    _arguments \
+                        '--help[Show help]' \
+                        '--version[Show version]'
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_ghx

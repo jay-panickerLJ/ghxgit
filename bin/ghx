@@ -1,0 +1,429 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ghxgit - Search and jump to GitHub PRs, issues, branches, commits
+# Usage: ghx jump <query> [OPTIONS]
+#   --open         Open the match in browser
+#   --checkout     Checkout the PR branch locally
+#   --type <type>  Limit search to specific type: pr, issue, branch, commit
+#   --help         Show this help message
+#   -v, --verbose  Verbose output
+
+VERSION="0.1.0"
+VERBOSE=${VERBOSE:-0}
+
+log_verbose() {
+    if [[ "$VERBOSE" -eq 1 ]]; then
+        echo "[DEBUG] $*" >&2
+    fi
+}
+
+log_error() {
+    echo "Error: $*" >&2
+}
+
+log_info() {
+    echo "Info: $*" >&2
+}
+
+show_help() {
+    cat <<EOF
+ghx - GitHub Experience CLI Tool
+
+USAGE
+    ghx jump <query> [OPTIONS]
+    ghx --help
+    ghx --version
+
+COMMANDS
+    jump <query>    Search and jump to a PR, issue, branch, or commit
+
+OPTIONS
+    --open          Open the best match in your browser
+    --checkout      Checkout the matched PR/branch locally
+    --type <type>   Limit search to a specific type:
+                    - pr, issue, branch, commit
+    --verbose (-v)  Show debug output
+    --help          Show this help message
+    --version       Show version
+
+EXAMPLES
+    ghx jump OPS-123
+    ghx jump "increase timeout" --open
+    ghx jump OPS-123 --checkout
+    ghx jump OPS-123 --type pr
+
+SEARCH ORDER (DEFAULT)
+    1. Pull Requests in current repo
+    2. Issues in current repo
+    3. Branches in current repo
+    4. Commits in current repo
+
+REQUIREMENTS
+    - gh (GitHub CLI) - https://github.com/cli/cli
+    - jq (JSON processor)
+    - git
+
+EOF
+}
+
+show_version() {
+    echo "ghxgit v$VERSION"
+}
+
+# Get the GitHub repo owner and name from git remote
+get_repo_info() {
+    local remote_url
+    remote_url=$(git config --get remote.origin.url 2>/dev/null || echo "")
+    
+    if [[ -z "$remote_url" ]]; then
+        log_error "Not a git repository or no origin remote found"
+        return 1
+    fi
+    
+    # Extract owner/repo from various git URL formats
+    if [[ "$remote_url" =~ ^https://github.com/([^/]+)/([^/]+)(\.git)?$ ]]; then
+        echo "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}" | sed 's/.git$//'
+    elif [[ "$remote_url" =~ ^git@github.com:([^/]+)/([^/]+)(\.git)?$ ]]; then
+        echo "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}" | sed 's/.git$//'
+    else
+        log_error "Could not parse GitHub repository from remote URL: $remote_url"
+        return 1
+    fi
+}
+
+# Search for PRs matching the query
+search_prs() {
+    local repo="$1"
+    local query="$2"
+    
+    log_verbose "Searching PRs in $repo for: $query"
+    
+    # Search by PR number or title/body
+    if [[ "$query" =~ ^[0-9]+$ ]]; then
+        # Exact PR number
+        gh pr view "$query" --repo "$repo" --json "number,title,url,headRefName,state" 2>/dev/null || return 1
+    else
+        # Search by title/body
+        gh search prs --repo "$repo" "$query" --limit 1 --json "number,title,url,headRefName,state" --template '{{range .}}{{json .}}{{end}}' 2>/dev/null || return 1
+    fi
+}
+
+# Search for issues matching the query
+search_issues() {
+    local repo="$1"
+    local query="$2"
+    
+    log_verbose "Searching issues in $repo for: $query"
+    
+    # Search by issue number or title/body
+    if [[ "$query" =~ ^[A-Z]+-[0-9]+$ ]]; then
+        # Likely a Jira-style issue key
+        gh search issues --repo "$repo" "$query" --limit 1 --json "number,title,url,state" --template '{{range .}}{{json .}}{{end}}' 2>/dev/null || return 1
+    else
+        # Search by title/body
+        gh search issues --repo "$repo" "$query" --limit 1 --json "number,title,url,state" --template '{{range .}}{{json .}}{{end}}' 2>/dev/null || return 1
+    fi
+}
+
+# Search for branches matching the query
+search_branches() {
+    local repo="$1"
+    local query="$2"
+    
+    log_verbose "Searching branches in $repo for: $query"
+    
+    # List branches and search locally
+    gh api "repos/$repo/branches" --paginate --jq '.[] | select(.name | contains("'"$query"'")) | {name: .name, url: "https://github.com/'"$repo"'/tree/\(.name)"}' 2>/dev/null | head -1
+}
+
+# Search for commits matching the query
+search_commits() {
+    local repo="$1"
+    local query="$2"
+    
+    log_verbose "Searching commits in $repo for: $query"
+    
+    gh search commits --repo "$repo" "$query" --limit 1 --json "oid,message,url" --template '{{range .}}{{json .}}{{end}}' 2>/dev/null || return 1
+}
+
+# Main search function that tries all types in order
+search_all() {
+    local repo="$1"
+    local query="$2"
+    local search_type="${3:-}"
+    
+    local result=""
+    local found_type=""
+    
+    # If specific type requested, only search that type
+    if [[ -n "$search_type" ]]; then
+        log_verbose "Searching only for type: $search_type"
+        case "$search_type" in
+            pr)
+                result=$(search_prs "$repo" "$query" 2>/dev/null) && found_type="pr"
+                ;;
+            issue)
+                result=$(search_issues "$repo" "$query" 2>/dev/null) && found_type="issue"
+                ;;
+            branch)
+                result=$(search_branches "$repo" "$query" 2>/dev/null) && found_type="branch"
+                ;;
+            commit)
+                result=$(search_commits "$repo" "$query" 2>/dev/null) && found_type="commit"
+                ;;
+            *)
+                log_error "Unknown search type: $search_type"
+                return 1
+                ;;
+        esac
+    else
+        # Default search order: PR -> Issue -> Branch -> Commit
+        log_verbose "Searching in order: PR -> Issue -> Branch -> Commit"
+        
+        if result=$(search_prs "$repo" "$query" 2>/dev/null); then
+            found_type="pr"
+        elif result=$(search_issues "$repo" "$query" 2>/dev/null); then
+            found_type="issue"
+        elif result=$(search_branches "$repo" "$query" 2>/dev/null); then
+            found_type="branch"
+        elif result=$(search_commits "$repo" "$query" 2>/dev/null); then
+            found_type="commit"
+        fi
+    fi
+    
+    if [[ -z "$result" ]]; then
+        log_error "No matches found for query: $query"
+        return 1
+    fi
+    
+    echo "$result"
+    echo "$found_type"
+}
+
+# Parse JSON result and extract info
+extract_info() {
+    local result="$1"
+    local found_type="$2"
+    
+    case "$found_type" in
+        pr)
+            local number=$(echo "$result" | jq -r '.number')
+            local title=$(echo "$result" | jq -r '.title')
+            local url=$(echo "$result" | jq -r '.url')
+            local branch=$(echo "$result" | jq -r '.headRefName')
+            echo "$number" "$title" "$url" "$branch" "$found_type"
+            ;;
+        issue)
+            local number=$(echo "$result" | jq -r '.number')
+            local title=$(echo "$result" | jq -r '.title')
+            local url=$(echo "$result" | jq -r '.url')
+            echo "$number" "$title" "$url" "" "$found_type"
+            ;;
+        branch)
+            local name=$(echo "$result" | jq -r '.name')
+            local url=$(echo "$result" | jq -r '.url')
+            echo "" "$name" "$url" "$name" "$found_type"
+            ;;
+        commit)
+            local oid=$(echo "$result" | jq -r '.oid' | cut -c1-7)
+            local message=$(echo "$result" | jq -r '.message' | head -1)
+            local url=$(echo "$result" | jq -r '.url')
+            echo "$oid" "$message" "$url" "" "$found_type"
+            ;;
+    esac
+}
+
+# Output result
+print_result() {
+    local number="$1"
+    local title="$2"
+    local url="$3"
+    local branch_name="$4"
+    local found_type="$5"
+    
+    printf "%-10s %s\n" "[$found_type]" "$title"
+    if [[ -n "$number" ]]; then
+        printf "%-10s %s\n" "Number:" "$number"
+    fi
+    if [[ -n "$branch_name" ]]; then
+        printf "%-10s %s\n" "Branch:" "$branch_name"
+    fi
+    printf "%-10s %s\n" "URL:" "$url"
+}
+
+# Open URL in browser
+open_url() {
+    local url="$1"
+    
+    log_verbose "Opening URL: $url"
+    
+    if command -v xdg-open &>/dev/null; then
+        xdg-open "$url"
+    elif command -v open &>/dev/null; then
+        open "$url"
+    elif command -v wslview &>/dev/null; then
+        wslview "$url"
+    else
+        log_error "Could not find a way to open browser. Please open manually: $url"
+        return 1
+    fi
+}
+
+# Checkout branch
+checkout_branch() {
+    local branch="$1"
+    local found_type="$2"
+    
+    if [[ "$found_type" != "pr" && "$found_type" != "branch" ]]; then
+        log_error "Can only checkout PR or branch, not $found_type"
+        return 1
+    fi
+    
+    if [[ -z "$branch" ]]; then
+        log_error "No branch to checkout"
+        return 1
+    fi
+    
+    log_verbose "Checking out branch: $branch"
+    git checkout "$branch" || git fetch origin "$branch:$branch" && git checkout "$branch"
+}
+
+# Check dependencies
+check_dependencies() {
+    local missing=()
+    
+    command -v gh >/dev/null 2>&1 || missing+=("gh (GitHub CLI)")
+    command -v jq >/dev/null 2>&1 || missing+=("jq")
+    command -v git >/dev/null 2>&1 || missing+=("git")
+    
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        log_error "Missing required dependencies:"
+        for dep in "${missing[@]}"; do
+            log_error "  - $dep"
+        done
+        return 1
+    fi
+}
+
+# Main function
+main() {
+    local command="${1:-}"
+    
+    case "$command" in
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --version|-v)
+            show_version
+            exit 0
+            ;;
+        jump)
+            shift
+            ;;
+        "")
+            show_help
+            exit 1
+            ;;
+        *)
+            # Assume first arg is the command if it looks like a query
+            ;;
+    esac
+    
+    # Parse arguments
+    local query=""
+    local open_browser=0
+    local do_checkout=0
+    local search_type=""
+    local verbose=0
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --open)
+                open_browser=1
+                shift
+                ;;
+            --checkout)
+                do_checkout=1
+                shift
+                ;;
+            --type)
+                search_type="$2"
+                shift 2
+                ;;
+            -v|--verbose)
+                verbose=1
+                VERBOSE=1
+                shift
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            --version)
+                show_version
+                exit 0
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+            *)
+                if [[ -z "$query" ]]; then
+                    query="$1"
+                else
+                    log_error "Unexpected argument: $1"
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+    
+    if [[ -z "$query" ]]; then
+        log_error "Query is required"
+        show_help
+        exit 1
+    fi
+    
+    # Check dependencies
+    if ! check_dependencies; then
+        exit 1
+    fi
+    
+    # Get repo info
+    if ! repo=$(get_repo_info); then
+        exit 1
+    fi
+    
+    log_verbose "Using repository: $repo"
+    
+    # Search
+    local result
+    local found_type
+    if ! read -r result found_type < <(search_all "$repo" "$query" "$search_type"); then
+        exit 1
+    fi
+    
+    # Extract and display info
+    local number title url branch_name
+    read -r number title url branch_name found_type < <(extract_info "$result" "$found_type")
+    
+    print_result "$number" "$title" "$url" "$branch_name" "$found_type"
+    
+    # Handle --open flag
+    if [[ $open_browser -eq 1 ]]; then
+        open_url "$url" || exit 1
+    fi
+    
+    # Handle --checkout flag
+    if [[ $do_checkout -eq 1 ]]; then
+        checkout_branch "$branch_name" "$found_type" || exit 1
+        log_info "Successfully checked out: $branch_name"
+    fi
+}
+
+# Run main function
+main "$@"

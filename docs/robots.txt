@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jay-panickerLJ.github.io/ghxgit/sitemap.xml
+
+# Allow crawling of all content
+Disallow:
+
+# Specific rules (if needed)
+User-agent: *
+Crawl-delay: 1

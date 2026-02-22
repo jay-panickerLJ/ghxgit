@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ghxgit - GitHub Experience CLI Tool</title>
+    <meta name="description" content="Search and jump to GitHub PRs, issues, branches, and commits. Manage Git workflows from the command line.">
+    <meta name="keywords" content="github, cli, git, terminal, productivity, tool">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="canonical" href="https://jay-panickerLJ.github.io/ghxgit/">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-content">
+                <div class="logo">
+                    <a href="#hero">
+                        <code>ghx</code>
+                    </a>
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#commands">Commands</a></li>
+                    <li><a href="#installation">Installation</a></li>
+                    <li><a href="#examples">Examples</a></li>
+                    <li><a href="#github" class="btn-github">GitHub</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>GitHub Experience CLI</h1>
+                <p class="hero-subtitle">Search and jump to PRs, issues, branches, and commits from your terminal</p>
+                
+                <div class="hero-demo">
+                    <div class="terminal-demo">
+                        <div class="terminal-header">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <div class="terminal-body">
+                            <div class="terminal-line">
+                                <span class="prompt">$</span> <span class="command">ghx jump OPS-123</span>
+                            </div>
+                            <div class="terminal-line output">
+                                <span class="bracket">[</span><span class="pr">pr</span><span class="bracket">]</span>       Increase timeout during auth
+                            </div>
+                            <div class="terminal-line output">
+                                <span class="label">Number:</span>    456
+                            </div>
+                            <div class="terminal-line output">
+                                <span class="label">Branch:</span>    feature/increase-timeout
+                            </div>
+                            <div class="terminal-line output">
+                                <span class="label">URL:</span>       https://github.com/owner/repo/pull/456
+                            </div>
+                            <div class="terminal-line">
+                                <span class="prompt">$</span> <span class="command">ghx branch list</span>
+                            </div>
+                            <div class="terminal-line output">
+                                <span class="current">* main</span>
+                            </div>
+                            <div class="terminal-line output">
+                                &nbsp;&nbsp;develop
+                            </div>
+                            <div class="terminal-line output">
+                                &nbsp;&nbsp;feature/dashboard
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hero-cta">
+                    <a href="#installation" class="btn btn-primary">Get Started</a>
+                    <a href="https://github.com/jay-panickerLJ/ghxgit" class="btn btn-secondary" target="_blank">View on GitHub</a>
+                </div>
+
+                <div class="hero-badges">
+                    <span class="badge">CLI Tool</span>
+                    <span class="badge">Git Workflow</span>
+                    <span class="badge">GitHub Integration</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2>Powerful Features</h2>
+            <p class="section-subtitle">Everything you need for faster GitHub workflow</p>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Smart Search</h3>
+                    <p>Search PRs, issues, branches, and commits in order of relevance with fuzzy matching</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Browser Integration</h3>
+                    <p>Open search results directly in your browser with the <code>--open</code> flag</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Quick Checkout</h3>
+                    <p>Checkout PR branches and switch between branches in seconds</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌳</div>
+                    <h3>Branch Management</h3>
+                    <p>List, create, switch, and delete branches with intuitive commands</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📤</div>
+                    <h3>Smart Push</h3>
+                    <p>Push code safely with force-with-lease, upstream tracking, and more</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Git Status</h3>
+                    <p>Quick status checks with ahead/behind commit counts and tracked changes</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Sync Command</h3>
+                    <p>Fetch all remotes and pull updates in a single command</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Fast & Lightweight</h3>
+                    <p>Built with pure bash - minimal overhead, maximum performance</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Type Filtering</h3>
+                    <p>Search specific types: PR, issue, branch, or commit</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Commands Section -->
+    <section id="commands" class="commands">
+        <div class="container">
+            <h2>Command Reference</h2>
+            <p class="section-subtitle">Master ghxgit with these essential commands</p>
+
+            <div class="commands-grid">
+                <div class="command-group">
+                    <h3>Search & Jump</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code>ghx jump &lt;query&gt;</code>
+                            <p>Search for PR, issue, branch, or commit</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx jump &lt;query&gt; --open</code>
+                            <p>Open result in browser</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx jump &lt;query&gt; --checkout</code>
+                            <p>Checkout branch immediately</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx jump &lt;query&gt; --type pr</code>
+                            <p>Search only PRs</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3>Branch Management</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code>ghx branch list</code>
+                            <p>List all branches</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx branch switch &lt;name&gt;</code>
+                            <p>Switch with fuzzy search</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx branch create &lt;name&gt;</code>
+                            <p>Create new branch</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx branch delete &lt;name&gt;</code>
+                            <p>Delete branch safely</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3>Git Workflow</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code>ghx push</code>
+                            <p>Push with smart options</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx push --force-with-lease</code>
+                            <p>Safe force push</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx pull --rebase</code>
+                            <p>Pull with rebase</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx sync</code>
+                            <p>Fetch & pull everything</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3>Status & History</h3>
+                    <div class="command-list">
+                        <div class="command-item">
+                            <code>ghx status</code>
+                            <p>Show git status</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx log [limit]</code>
+                            <p>Show recent commits</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx branch</code>
+                            <p>Show current branch</p>
+                        </div>
+                        <div class="command-item">
+                            <code>ghx --version</code>
+                            <p>Show version</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Examples Section -->
+    <section id="examples" class="examples">
+        <div class="container">
+            <h2>Usage Examples</h2>
+            <p class="section-subtitle">Real-world workflows to boost your productivity</p>
+
+            <div class="examples-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-tab="search">Search & Jump</button>
+                    <button class="tab-btn" data-tab="branches">Branch Work</button>
+                    <button class="tab-btn" data-tab="workflow">Git Workflow</button>
+                    <button class="tab-btn" data-tab="review">Code Review</button>
+                </div>
+
+                <div class="tab-content">
+                    <div class="tab-pane active" id="tab-search">
+                        <div class="example-code">
+                            <div class="code-header">Search for a PR and open it</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx jump OPS-123
+<span class="output">[pr]       Increase timeout during auth
+Number:    456
+Branch:    feature/increase-timeout
+URL:       https://github.com/owner/repo/pull/456</span>
+
+<span class="prompt">$</span> ghx jump OPS-123 --open
+<span class="comment"># Opens in browser automatically</span></pre>
+                            </div>
+                        </div>
+                        <div class="example-code">
+                            <div class="code-header">Search by description</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx jump <span class="string">"authentication"</span> --type pr --checkout
+<span class="output">✓ Successfully checked out: feature/authentication</span></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-branches">
+                        <div class="example-code">
+                            <div class="code-header">List and switch branches</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx branch list
+<span class="output">Local branches:
+===============
+* main (abc1234)
+  develop (def5678)
+  feature/dashboard (ghi9012)</span>
+
+<span class="prompt">$</span> ghx branch switch feature
+<span class="output"># Switched to branch 'feature/dashboard'</span></pre>
+                            </div>
+                        </div>
+                        <div class="example-code">
+                            <div class="code-header">Create and delete branches</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx branch create feature/new-widget
+<span class="output">✓ Created and switched to branch: feature/new-widget</span>
+
+<span class="prompt">$</span> ghx branch delete old-feature
+<span class="output">✓ Deleted branch: old-feature</span></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-workflow">
+                        <div class="example-code">
+                            <div class="code-header">Complete push workflow</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx status
+<span class="output">Branch: feature/dashboard
+Status:
+ M src/dashboard.js
+ A src/components/Widget.js
+
+Commits:
+  📤 2 commit(s) ahead of origin</span>
+
+<span class="prompt">$</span> ghx push -u
+<span class="output"># Pushes and sets upstream</span></pre>
+                            </div>
+                        </div>
+                        <div class="example-code">
+                            <div class="code-header">Sync and check latest</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx sync
+<span class="output">Fetching all remotes...
+Pulling latest changes...</span>
+
+<span class="prompt">$</span> ghx log 5
+<span class="output"># Shows last 5 commits</span></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane" id="tab-review">
+                        <div class="example-code">
+                            <div class="code-header">Review and checkout PR</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx jump OPS-123 --checkout
+<span class="output">✓ Successfully checked out: feature/increase-timeout</span>
+
+<span class="prompt">$</span> ghx log 3
+<span class="output"># Review the commits in the PR</span></pre>
+                            </div>
+                        </div>
+                        <div class="example-code">
+                            <div class="code-header">Return to main</div>
+                            <div class="code-block">
+<pre><span class="prompt">$</span> ghx branch switch main
+<span class="output"># Switched to branch 'main'</span>
+
+<span class="prompt">$</span> ghx sync
+<span class="output"># Update with latest changes</span></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section id="installation" class="installation">
+        <div class="container">
+            <h2>Installation</h2>
+            <p class="section-subtitle">Get started in minutes</p>
+
+            <div class="installation-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Install Dependencies</h3>
+                    <p>Make sure you have these installed:</p>
+                    <div class="install-group">
+                        <div class="install-item">
+                            <strong>Git</strong> - Version control
+                        </div>
+                        <div class="install-item">
+                            <strong>gh (GitHub CLI)</strong> - Command line interface for GitHub
+                            <a href="https://cli.github.com" target="_blank">→ Install</a>
+                        </div>
+                        <div class="install-item">
+                            <strong>jq</strong> - JSON processor
+                        </div>
+                        <div class="install-item">
+                            <strong>fzf (optional)</strong> - Fuzzy finder for interactive selection
+                            <a href="https://github.com/junegunn/fzf" target="_blank">→ Install</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Clone & Install</h3>
+                    <div class="code-block install-code">
+<pre><span class="comment"># Clone the repository</span>
+git clone https://github.com/jay-panickerLJ/ghxgit.git
+cd ghxgit
+
+<span class="comment"># Run the installer</span>
+bash install.sh</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Configure Shell</h3>
+                    <p>Add to your <code>~/.zshrc</code>:</p>
+                    <div class="code-block install-code">
+<pre>autoload -Uz compinit && compinit</pre>
+                    </div>
+                    <p>Then restart your shell:</p>
+                    <div class="code-block install-code">
+<pre>exec zsh</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Verify Installation</h3>
+                    <div class="code-block install-code">
+<pre>ghx --version
+<span class="output">ghxgit v0.2.0</span></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="install-tabs">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" data-install="macos">macOS</button>
+                    <button class="tab-btn" data-install="linux">Linux</button>
+                    <button class="tab-btn" data-install="manual">Manual</button>
+                </div>
+
+                <div class="install-content">
+                    <div class="install-pane active" id="install-macos">
+                        <h4>Install Dependencies with Homebrew</h4>
+                        <div class="code-block">
+<pre>brew install gh jq fzf</pre>
+                        </div>
+                    </div>
+
+                    <div class="install-pane" id="install-linux">
+                        <h4>Install Dependencies</h4>
+                        <div class="code-block">
+<pre><span class="comment"># Debian/Ubuntu</span>
+sudo apt install gh jq fzf
+
+<span class="comment"># Fedora</span>
+sudo dnf install gh jq fzf</pre>
+                        </div>
+                    </div>
+
+                    <div class="install-pane" id="install-manual">
+                        <h4>Manual Installation</h4>
+                        <div class="code-block">
+<pre>sudo install -m 0755 bin/ghx /usr/local/bin/ghx
+
+<span class="comment"># ZSH completions</span>
+sudo mkdir -p /usr/local/share/zsh/site-functions
+sudo install -m 0644 completions/zsh/_ghx \
+  /usr/local/share/zsh/site-functions/_ghx</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits">
+        <div class="container">
+            <h2>Why Use ghxgit?</h2>
+            <p class="section-subtitle">Level up your GitHub workflow</p>
+
+            <div class="benefits-grid">
+                <div class="benefit">
+                    <h3>⏱️ Save Time</h3>
+                    <p>Replace multiple browser tabs and commands with quick CLI searches</p>
+                </div>
+
+                <div class="benefit">
+                    <h3>🔥 Stay in Flow</h3>
+                    <p>Never leave your terminal. Context switching is the enemy of productivity</p>
+                </div>
+
+                <div class="benefit">
+                    <h3>🎮 Powerful Shortcuts</h3>
+                    <p>Automate common Git workflows with intuitive commands</p>
+                </div>
+
+                <div class="benefit">
+                    <h3>🛡️ Safety First</h3>
+                    <p>Smart confirmations and safe-by-default options prevent accidents</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq">
+        <div class="container">
+            <h2>Frequently Asked Questions</h2>
+
+            <div class="faq-items">
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>What shells does ghxgit support?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>ghxgit is a Bash script that works on any POSIX-compliant shell. ZSH completions are included. Bash and Fish completions are planned for future versions.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Can I use ghxgit with private repositories?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes! ghxgit uses the GitHub CLI which respects your authentication. Simply run <code>gh auth login</code> to authenticate with your GitHub account.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Does it work on Windows?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Yes, on Windows Subsystem for Linux (WSL). Install WSL2 first, then follow the Linux installation instructions.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Is there support for GitHub Enterprise?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Enterprise support is planned for v0.3.0. For now, you can configure GitHub CLI to work with Enterprise using <code>gh auth login</code> with a custom hostname.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>Can I search across multiple repositories?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Currently, ghxgit searches only the current repository. Multi-repo search is on the roadmap for v0.3.0.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <span>How do I uninstall ghxgit?</span>
+                        <span class="faq-toggle">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Simply remove the installed files:
+                        <div style="margin-top: 10px;">
+<pre><code>sudo rm /usr/local/bin/ghx
+sudo rm /usr/local/share/zsh/site-functions/_ghx</code></pre>
+                        </div>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to Transform Your Workflow?</h2>
+            <p>Join developers who are using ghxgit to work faster and smarter</p>
+            <div class="cta-buttons">
+                <a href="#installation" class="btn btn-primary btn-large">Get Started Now</a>
+                <a href="https://github.com/jay-panickerLJ/ghxgit" class="btn btn-secondary btn-large" target="_blank">View on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>ghxgit</h4>
+                    <p>GitHub Experience CLI Tool</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="https://github.com/jay-panickerLJ/ghxgit" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://github.com/jay-panickerLJ/ghxgit/issues" target="_blank">Report Issues</a></li>
+                        <li><a href="https://github.com/jay-panickerLJ/ghxgit/blob/main/CONTRIBUTING.md" target="_blank">Contribute</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://cli.github.com" target="_blank">GitHub CLI</a></li>
+                        <li><a href="https://git-scm.com" target="_blank">Git Docs</a></li>
+                        <li><a href="https://github.com/junegunn/fzf" target="_blank">fzf</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Connect</h4>
+                    <ul>
+                        <li><a href="https://github.com/jay-panickerLJ" target="_blank">GitHub Profile</a></li>
+                        <li><a href="https://twitter.com/" target="_blank">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 ghxgit. Created with <span class="heart">❤️</span> by <a href="https://github.com/jay-panickerLJ" target="_blank">jay-panickerLJ</a></p>
+                <p>Licensed under MIT License</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

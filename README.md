@@ -2,6 +2,8 @@
 
 A powerful command-line tool for searching and jumping to GitHub PRs, issues, branches, and commits directly from your terminal. Plus integrated git workflow helpers for branches, pushing, and pulling.
 
+**🌐 [Visit the Website](https://jay-panickerLJ.github.io/ghxgit/)** - Beautiful interactive documentation
+
 ## Features
 
 - 🔍 **Smart Search** - Search across PRs, issues, branches, and commits in order of relevance
@@ -15,6 +17,51 @@ A powerful command-line tool for searching and jumping to GitHub PRs, issues, br
 - 💡 **Git Status** - Quick status check with ahead/behind commits
 - 📝 **ZSH Completions** - Full shell completion support
 - ⚡ **Fast** - Built with bash for minimal overhead
+
+## Installation
+
+### Prerequisites
+
+- **Git** - Obviously!
+- **gh (GitHub CLI)** - [Install guide](https://cli.github.com)
+- **jq** - JSON processor
+- **fzf** (optional) - [Install guide](https://github.com/junegunn/fzf) - For interactive branch selection
+
+### Install on Linux/macOS
+
+```bash
+# Clone the repository
+git clone https://github.com/jay-panickerLJ/ghxgit.git
+cd ghxgit
+
+# Run the installer
+bash install.sh
+```
+
+### Manual Installation
+
+```bash
+# Copy the main script
+sudo install -m 0755 bin/ghx /usr/local/bin/ghx
+
+# Copy ZSH completions
+sudo mkdir -p /usr/local/share/zsh/site-functions
+sudo install -m 0644 completions/zsh/_ghx /usr/local/share/zsh/site-functions/_ghx
+```
+
+## 📖 Website
+
+For interactive documentation and examples, visit the **[ghxgit website](https://jay-panickerLJ.github.io/ghxgit/)**
+
+The website includes:
+- Feature showcase with interactive demos
+- Complete command reference
+- Real-world usage examples
+- Installation guides
+- FAQ section
+- And more!
+
+Alternatively, see the [WEBSITE.md](WEBSITE.md) file for deployment instructions.
 
 ## Installation
 

@@ -1,0 +1,29 @@
+# Jekyll configuration for GitHub Pages
+# This tells GitHub Pages to serve the docs folder as the website
+
+# Site settings
+title: ghxgit
+description: GitHub Experience CLI Tool - Search and jump to PRs, issues, branches, and commits from your terminal
+url: https://jay-panickerLJ.github.io/ghxgit/
+baseurl: /ghxgit
+
+# Build settings
+markdown: kramdown
+theme: null
+plugins: []
+
+# Exclude from processing
+exclude:
+  - .gitignore
+  - README.md
+  - Gemfile
+  - node_modules
+
+# Allow SCSS
+sass:
+  style: compressed
+
+# Markdown processor
+kramdown:
+  input: GFM
+  hard_wrap: false
